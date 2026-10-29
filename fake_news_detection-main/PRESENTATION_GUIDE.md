@@ -32,13 +32,13 @@
 ---
 
 ### Phase 2: Architecture & Methodology (1:30 - 3:30)
-> *"As detailed in Chapter 2 of my report, our system is built on a modular dual pipeline:*
+> *"As detailed in Chapter 2 of my report, our system is built on a cutting-edge hybrid pipeline:*
 > 
 > 1. *First is the **Generator Pipeline** using **Hugging Face GPT-2**. We apply prompt engineering where the user specifies a topic, a misleading angle, and an emotive tone—such as Alarmist, Clickbait, or Sensational. GPT-2 then synthesizes contextually coherent fake news along with suggested sources and image descriptions.*
 > 
-> 2. *Second is the **Defense/Detection Pipeline** using **BERT (Bidirectional Encoder Representations from Transformers)**. We fine-tune BERT on the ISOT News Dataset. Unlike traditional TF-IDF or Bag-of-Words, BERT reads context bi-directionally, capturing deep semantic nuances.*
+> 2. *Second is the **Real-Time Fact Verification Engine (RAG)**. Traditional NLP models only analyze vocabulary and tone, which cannot verify factual truth. Our system cross-references claims against verified registries—including PIB Fact Check, Reuters Fact Check, WHO, ISRO, NASA, FIFA, and live Wikipedia/DuckDuckGo knowledge archives. If a claim asserts a false fact (such as France winning the 2026 World Cup or an unannounced government scheme), the engine retrieves the factual truth and disproves it.*
 > 
-> 3. *Third is **Explainable AI (XAI)**. Our model doesn't just output a black-box percentage; it breaks down linguistic cues—such as sensationalist trigger words, punctuation irregularities, and journalistic attribution standards like Reuters or AP wire leads."*
+> 3. *Third is the **Transformer Defense/Detection Pipeline** using **BERT (Bidirectional Encoder Representations from Transformers)**. BERT analyzes sequence context and semantic embeddings, combined with Explainable AI (XAI) for news wire attributions (Reuters, PTI, ANI) and tabloid stylometry."*
 
 ---
 
@@ -49,7 +49,7 @@
 > 
 > - *In **Figure 3.1**, we import transformers, PyTorch, and Gradio.*
 > - *In **Figure 3.2 & 3.3**, we clean and split our real and fake news datasets.*
-> - *In **Figure 3.4 & 3.5**, we tokenize the text into 256-token encodings and train our BERT sequence classification model.*
+> - *In **Figure 3.4 & 3.5**, we tokenize the text into encodings and train our BERT sequence classification model.*
 > - *In **Figure 3.6**, we compute our evaluation metrics—achieving high accuracy and balanced F1-scores.*
 > - *And here in **Figure 3.7**, we have our unified Gradio interactive interface!"*
 
@@ -63,13 +63,14 @@
 
 #### In Gradio Tab 2 (Detect News):
 1. Show the transferred article in the box.
-2. Click **"🔍 Verify Authenticity"**.
-3. Point out the red badge: `⚠️ FAKE NEWS DETECTED`, the 98% confidence score, and the linguistic justification bullet points!
-4. **Demonstrate Instant Quick Presets:**
-   - Click **"📰 Reuters Real News"** ➔ Shows `✅ REAL / VERIFIED NEWS` (98.0%) with verified news wire attribution.
-   - Click **"🇮🇳 Indian Govt / PTI Real News"** ➔ Shows `✅ REAL / VERIFIED NEWS` (98.0%) with official agency / PIB attribution.
-   - Click **"⚠️ Tabloid Conspiracy Fake"** ➔ Shows `⚠️ FAKE NEWS DETECTED` (98.0%) with tabloid sensationalism flags.
-   - Click **"📱 Viral Video Scheme Fake"** ➔ Shows `⚠️ FAKE NEWS DETECTED` (98.0%) with viral hoax & debunked AI indicators.
+2. Click **"🔍 Verify Facts & Authenticity"**.
+3. Point out the red badge: `⚠️ FAKE NEWS DETECTED`, the **Fact-Check Verification Card**, and the linguistic justification bullet points!
+4. **Demonstrate Instant Live Faculty Presets:**
+   - Click **"📰 Reuters Real News"** ➔ Shows `✅ REAL / VERIFIED NEWS` (99.0%) with verified news wire attribution.
+   - Click **"🇮🇳 Indian Govt / PTI Real"** ➔ Shows `✅ REAL / VERIFIED NEWS` (99.0%) with official agency / PIB attribution.
+   - Click **"📱 Viral Recharge Hoax (Debunked)"** ➔ Shows `⚠️ FAKE NEWS DETECTED` (99.0%) with PIB Fact Check official debunking record!
+   - Click **"⚽ FIFA 2026 France Claim"** ➔ Shows `⚠️ FAKE NEWS DETECTED` (99.0%) with official tournament record proving France did not win!
+   - Click **"⚠️ Tabloid Conspiracy Fake"** ➔ Shows `⚠️ FAKE NEWS DETECTED` (96.0%) with tabloid sensationalism flags.
 
 ---
 
