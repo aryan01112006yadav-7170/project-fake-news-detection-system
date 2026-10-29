@@ -72,19 +72,24 @@ FAKE_TRIGGERS = [
     "viral", "bizarre", "clandestine", "panicked", "leaked", "disaster", "hidden truth",
     "they don't want you to know", "proof revealed", "censored", "whistleblower",
     "explosive", "shocking discovery", "stumbled upon", "underground",
-    "big pharma", "mind-blowing", "classified leak", "insiders say", "aliens", "shadow government"
+    "big pharma", "mind-blowing", "classified leak", "insiders say", "aliens", "shadow government",
+    "rigged", "rumor", "alleged", "claims that"
 ]
 
 CREDIBLE_WIRE_PATTERNS = [
-    r'\([a-zA-Z\s]*reuters\)',
-    r'\([a-zA-Z\s]*ap\)',
-    r'\([a-zA-Z\s]*afp\)',
-    r'\([a-zA-Z\s]*bbc\)',
-    r'\([a-zA-Z\s]*bloomberg\)'
+    r'\(reuters\)',
+    r'\(ap\)',
+    r'\(afp\)',
+    r'\(bbc\)',
+    r'\(bloomberg\)',
+    r'reuters\s*-',
+    r'associated press'
 ]
 
 def analyze_linguistic_cues(text):
-    text_lower = text.lower()
+    text_lower = text.lower().strip()
+    words = text_lower.split()
+    word_count = len(words)
     
     triggers_found = []
     for trig in FAKE_TRIGGERS:
@@ -95,23 +100,35 @@ def analyze_linguistic_cues(text):
     all_caps_words = len([w for w in text.split() if w.isupper() and len(w) > 2])
     has_wire = any(re.search(pat, text_lower) for pat in CREDIBLE_WIRE_PATTERNS)
     
+    # Check for short casual questions or unverified speculative tournament/event claims
+    is_question = "?" in text or text_lower.startswith(("is ", "are ", "did ", "does ", "will ", "who ", "what "))
+    is_speculative = any(kw in text_lower for kw in ["world cup", "worldcup", "fifa", "election win", "winner", "champions", "won the", "win by"])
+    is_short_snippet = word_count < 20
+    
     # Calculate calibrated veracity score
     fake_score = 0.20
+    
+    if is_question:
+        fake_score += 0.45
+    if not has_wire:
+        fake_score += 0.35
+    if is_short_snippet and not has_wire:
+        fake_score += 0.25
+    if is_speculative and not has_wire:
+        fake_score += 0.20
+        
     if triggers_found:
-        fake_score += min(len(triggers_found) * 0.25, 0.60)
+        fake_score += min(len(triggers_found) * 0.20, 0.50)
     if exclamations > 0:
         fake_score += min(exclamations * 0.10, 0.25)
     if all_caps_words > 0:
         fake_score += min(all_caps_words * 0.05, 0.15)
         
-    if has_wire and len(triggers_found) <= 1:
-        fake_score = max(0.02, fake_score - 0.70)
-    elif not has_wire:
-        fake_score += 0.20
-        
-    # Directly flag synthetic GPT-2 generation phrasing
     if "shocking discovery reveals" in text_lower or "[breaking news" in text_lower:
-        fake_score = max(fake_score, 0.94)
+        fake_score = max(fake_score, 0.95)
+        
+    if has_wire and len(triggers_found) <= 1 and not is_question:
+        fake_score = max(0.02, fake_score - 0.70)
         
     sensational_score = int(min(max(fake_score * 100, 5), 98))
     
@@ -120,7 +137,9 @@ def analyze_linguistic_cues(text):
         "matches": triggers_found,
         "exclamations": exclamations,
         "all_caps": all_caps_words,
-        "has_wire": has_wire
+        "has_wire": has_wire,
+        "is_short": is_short_snippet,
+        "is_speculative": is_speculative
     }
 
 def generate_fake_news_fn(topic, tone, angle, temperature=0.85):
@@ -179,12 +198,10 @@ def detect_news_fn(article_text):
     """
     Fake News Detection Engine (matches Report Section 2.3 B & C)
     """
-    if not article_text or len(article_text.strip()) < 10:
+    if not article_text or len(article_text.strip()) < 5:
         return "⚠️ *Please paste a news article text to evaluate.*", {}, "No text provided."
 
     cues = analyze_linguistic_cues(article_text)
-    
-    # Calculate model probability
     calculated_fake = cues["sensational_score"] / 100.0
     
     if HAS_TRANSFORMERS and bert_model is not None and bert_tokenizer is not None:
@@ -201,13 +218,12 @@ def detect_news_fn(article_text):
                 out = bert_model(**inputs)
                 probs = torch.softmax(out.logits, dim=1)[0].cpu().numpy()
             raw_fake_prob = float(probs[0])
-            # If the article has strong misinformation cues, prioritize detection
             if cues["sensational_score"] >= 60:
                 fake_prob = max(calculated_fake, raw_fake_prob)
             elif cues["has_wire"]:
-                fake_prob = min(0.10, raw_fake_prob)
+                fake_prob = min(0.08, raw_fake_prob)
             else:
-                fake_prob = (raw_fake_prob * 0.4) + (calculated_fake * 0.6)
+                fake_prob = (raw_fake_prob * 0.3) + (calculated_fake * 0.7)
         except Exception as e:
             fake_prob = calculated_fake
     else:
@@ -217,7 +233,7 @@ def detect_news_fn(article_text):
     real_prob = 1.0 - fake_prob
 
     if fake_prob >= 0.5:
-        verdict = "⚠️ FAKE NEWS DETECTED"
+        verdict = "⚠️ FAKE / UNVERIFIED CLAIM DETECTED"
         color = "#dc2626"
         confidence = fake_prob * 100
     else:
@@ -227,18 +243,21 @@ def detect_news_fn(article_text):
 
     justification_points = []
     if cues["matches"]:
-        justification_points.append(f"• Highly emotive / sensationalist keywords detected: {', '.join(set(cues['matches']))}.")
+        justification_points.append(f"• Emotive / sensationalist vocabulary detected: {', '.join(set(cues['matches']))}.")
     if cues["exclamations"] > 0:
-        justification_points.append(f"• Contains {cues['exclamations']} exclamation mark(s), characteristic of tabloid/clickbait journalism.")
+        justification_points.append(f"• Punctuation anomaly: Found {cues['exclamations']} exclamation mark(s), characteristic of clickbait.")
+    if cues["is_short"]:
+        justification_points.append("• Input is an isolated claim/question lacking standard journalistic report structure.")
+    if cues["is_speculative"]:
+        justification_points.append("• Speculative claim regarding tournament or future event outcomes without official tournament verification.")
     if cues["has_wire"]:
-        justification_points.append("• Contains credible news wire attribution markers (e.g. Reuters / AP journalistic lead).")
+        justification_points.append("• Valid news wire attribution detected (e.g., standard Reuters / AP dispatch header).")
     else:
-        justification_points.append("• Lacks standardized verifiable news agency attribution or neutral citations.")
-    justification_points.append(f"• Transformer contextual analysis aligns with {('fabricated' if fake_prob >= 0.5 else 'authentic')} editorial standards.")
+        justification_points.append("• Source verification failed: Lacks authorized news agency attribution (Reuters, AP) or official confirmation.")
 
     justification = "\n".join(justification_points)
     badge = f"### Verdict: <span style='color:{color}; font-weight:bold; font-size:1.25em;'>{verdict}</span>\n**Confidence Score:** {confidence:.2f}%"
-    probabilities = {"Fake News Probability": round(fake_prob, 3), "Real News Probability": round(real_prob, 3)}
+    probabilities = {"Fake / Unverified Probability": round(fake_prob, 3), "Real News Probability": round(real_prob, 3)}
 
     return badge, probabilities, justification
 
