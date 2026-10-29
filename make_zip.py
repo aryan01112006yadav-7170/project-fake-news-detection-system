@@ -12,6 +12,7 @@ zip_path_workspace = os.path.join(source_dir, zip_filename)
 include_files = [
     "Fake_News_Generator_and_Detector_Colab.ipynb",
     "app.py",
+    "fact_checker.py",
     "README.md",
     "PRESENTATION_GUIDE.md",
     "requirements.txt",
